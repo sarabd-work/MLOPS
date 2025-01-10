@@ -1,0 +1,91 @@
+variables:
+- ${{ if eq(variables['Build.SourceBranchName'], 'release') }}:
+    # 'main' branch: PRD environment
+    - template: ../config-infra-prod.yml
+- ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    # 'main' branch: UAT environment
+    - template: ../config-infra-uat.yml
+- ${{ if and(ne(variables['Build.SourceBranchName'], 'main'),ne(variables['Build.SourceBranchName'], 'release')) }}:  
+    # 'develop' or feature branches: DEV environment
+    - template: ../config-infra-dev.yml
+- name: dataset_type
+    uri_file
+    uri_folder
+
+trigger:
+- none
+
+pool: $(ap_vm_image)
+
+stages:
+- stage: DeployTrainingPipeline
+  displayName: Deploy Training Pipeline
+  jobs:
+    - job: DeployTrainingPipeline
+      timeoutInMinutes: 120 # how long to run the job before automatically cancelling
+      steps:
+      - checkout: self
+        path: s/
+      - template: templates/install-az-cli.yml
+      - template: templates/install-aml-cli.yml
+      - template: templates/connect-to-workspace.yml
+      - template: templates/replace-items.yml
+        parameters:
+          replaced: env_pathxxxx
+          replacement: $(environment_path)
+          path: mlops/devops-pipelines/azureml/train/train-env.yml
+      - template: templates/register-environment.yml
+        parameters:
+          environment_name: taxi-train-env
+          environment_file: mlops/devops-pipelines/azureml/train/train-env.yml
+      - template: templates/replace-items.yml
+        parameters:
+          path: .\mlops\devops-pipelines\azureml\train\data.yml
+          replaced: dataxxxx
+          replacement: $(dataset_name)
+      - template: templates/replace-items.yml
+        parameters:
+          path: .\mlops\devops-pipelines\azureml\train\data.yml
+          replaced: datatypexxxx
+          replacement: $(dataset_type)
+      - template: templates/replace-items.yml
+        parameters:
+          path: .\mlops\devops-pipelines\azureml\train\data.yml
+          replaced: datapathxxxx
+          replacement: $(dataset_path)
+      - template: templates/register-data.yml
+        parameters:
+          data_type: $(dataset_type)
+          data_name: $(dataset_name)
+          data_file: mlops/devops-pipelines/azureml/train/data.yml
+      - template: templates/replace-items.yml
+        parameters:
+          path: .\mlops\devops-pipelines\azureml\train\pipeline.yml
+          replaced: dataxxxx
+          replacement: $(dataset_name)
+      - template: templates/replace-items.yml
+        parameters:
+          path: .\mlops\devops-pipelines\azureml\train\pipeline.yml
+          replaced: datatypexxxx
+          replacement: $(dataset_type)
+      - template: templates/replace-items.yml
+        parameters:
+          path: .\mlops\devops-pipelines\azureml\train\pipeline.yml
+          replaced: computexxxx
+          replacement: $(ml_compute)
+      - template: templates/replace-items.yml
+        parameters:
+          path: .\mlops\devops-pipelines\azureml\train\pipeline.yml
+          replaced: folderxxxx
+          replacement: $(folder_name)
+      - template: templates/replace-items.yml
+        parameters:
+          path: .\mlops\devops-pipelines\azureml\train\pipeline.yml
+          replaced: modelxxxx
+          replacement: $(model_name)      
+      - template: templates/run-pipeline.yml
+        parameters: 
+          pipeline_file: mlops/devops-pipelines/azureml/train/pipeline.yml
+          experiment_name: $(environment)_$(experiment_name)_$(Build.SourceBranchName)
+          display_name: $(environment)_$(display_name)_$(Build.BuildID)
+          enable_monitoring: $(enable_monitoring)

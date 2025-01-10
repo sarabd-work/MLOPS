@@ -1,0 +1,43 @@
+variables:
+- ${{ if eq(variables['Build.SourceBranchName'], 'release') }}:
+    # 'main' branch: PRD environment
+    - template: ../config-infra-prod.yml
+- ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    # 'main' branch: UAT environment
+    - template: ../config-infra-uat.yml
+- ${{ if and(ne(variables['Build.SourceBranchName'], 'main'),ne(variables['Build.SourceBranchName'], 'release')) }}:  
+    # 'develop' or feature branches: DEV environment
+    - template: ../config-infra-dev.yml
+
+trigger:
+- none
+
+pool: $(ap_vm_image)
+
+stages:
+- stage: DeployTrainingPipeline
+  displayName: Deploy Training Pipeline
+  jobs:
+    - job: DeployTrainingPipeline
+      timeoutInMinutes: 120 # how long to run the job before automatically cancelling
+      steps:
+      - checkout: self
+        path: s/
+      - template: templates/install-az-cli.yml
+      - template: templates/install-aml-cli.yml
+      - template: templates/connect-to-workspace.yml
+      - template: templates/replace-items.yml
+        parameters:
+          replaced: env_pathxxxx
+          replacement: $(environment_path)
+          path: mlops/devops-pipelines/azureml/train/train-env.yml
+      - template: templates/register-environment.yml
+        parameters:
+          environment_name: $(model_name)_env
+          environment_file: mlops/devops-pipelines/azureml/train/train-env.yml
+      - template: templates/run-pipeline.yml
+        parameters: 
+          pipeline_file: $(pipeline_path)
+          experiment_name: $(environment)_$(experiment_name)
+          display_name: $(environment)_$(display_name)
+          enable_monitoring: $(enable_monitoring)

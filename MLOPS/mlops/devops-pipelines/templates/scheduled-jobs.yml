@@ -1,0 +1,35 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+variables:
+- ${{ if eq(variables['Build.SourceBranchName'], 'release') }}:
+    # 'main' branch: PRD environment
+    - template: ../../config-infra-prod.yml
+- ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    # 'main' branch: UAT environment
+    - template: ../../config-infra-uat.yml
+- ${{ if and(ne(variables['Build.SourceBranchName'], 'main'),ne(variables['Build.SourceBranchName'], 'release')) }}:  
+    # 'develop' or feature branches: DEV environment
+    - template: ../../config-infra-dev.yml
+
+trigger:
+- none
+
+pool:
+  vmImage: ubuntu-20.04
+
+stages:
+- stage: DeployTrainingPipeline
+  displayName: Deploy Training Pipeline
+  jobs:
+    - job: DeployTrainingPipeline
+      timeoutInMinutes: 120 # how long to run the job before automatically cancelling
+      steps:
+      - checkout: self
+        path: s/
+      - template: templates/${{ variables.version }}/install-az-cli.yml
+      - template: templates/${{ variables.version }}/install-aml-cli.yml
+      - template: templates/${{ variables.version }}/create-schedule.yml
+        parameters: 
+          template_name: data-science/schedules/daily.yml
+          run_id: 'success'

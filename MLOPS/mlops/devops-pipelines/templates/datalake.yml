@@ -1,0 +1,48 @@
+parameters:
+  - name: identifier
+    type: string
+    default: a194157a-b053-407c-ad81-e23fef7b473f
+  - name: identifier_type
+    type: string
+    default: group
+  - name: permissions
+    type: string
+    default: rwx
+
+steps:
+  - task: AzureCLI@2
+    displayName: Change ACL
+    inputs:
+      azureSubscription: $(ado_service_connection_aml_ws)
+      scriptType: bash
+      scriptLocation: inlineScript
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      inlineScript: |
+        az storage fs access update-recursive --acl "${{ parameters.identifier_type }}:${{ parameters.identifier }}:${{ parameters.permissions }}" -p 'Unrestricted Zone' -f inputzone --account-name uksdevfdevmlwdatadlsa --auth-mode login
+  - task: AzureCLI@2
+    displayName: Change ACL
+    inputs:
+      azureSubscription: $(ado_service_connection_aml_ws)
+      scriptType: bash
+      scriptLocation: inlineScript
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      inlineScript: |
+        az storage fs access set --acl "user::rwx,group::r-x,${{ parameters.identifier_type }}:${{ parameters.identifier }}:${{ parameters.permissions }},mask::rwx,other::---" -p / -f inputzone --account-name uksdevfdevmlwdatadlsa --auth-mode login
+  - task: AzureCLI@2
+    displayName: Change ACL
+    inputs:
+      azureSubscription: $(ado_service_connection_aml_ws)
+      scriptType: bash
+      scriptLocation: inlineScript
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      inlineScript: |
+        az storage fs access update-recursive --acl "${{ parameters.identifier_type }}:${{ parameters.identifier }}:${{ parameters.permissions }}" -p / -f outputzone --account-name uksdevfdevmlwdatadlsa --auth-mode login
+  - task: AzureCLI@2
+    displayName: Check ACL Change
+    inputs:
+      azureSubscription: $(ado_service_connection_aml_ws)
+      scriptType: bash
+      scriptLocation: inlineScript
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      inlineScript: |
+        az storage fs access show -p 'Unrestricted Zone' -f inputzone --account-name uksdevfdevmlwdatadlsa --auth-mode login

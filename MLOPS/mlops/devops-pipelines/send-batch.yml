@@ -1,0 +1,38 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+variables:
+- ${{ if eq(variables['Build.SourceBranchName'], 'release') }}:
+    # 'main' branch: PRD environment
+    - template: ../config-infra-prod.yml
+- ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    # 'main' branch: UAT environment
+    - template: ../config-infra-uat.yml
+- ${{ if and(ne(variables['Build.SourceBranchName'], 'main'),ne(variables['Build.SourceBranchName'], 'release')) }}:  
+    # 'develop' or feature branches: DEV environment
+    - template: ../config-infra-dev.yml
+- name: endpoint_type
+  value: batch
+
+trigger:
+- none
+
+pool: $(ap_vm_image)
+
+stages:
+- stage: CreateBatchEndpoint
+  displayName: Create/Update Batch Endpoint 
+  jobs:
+    - job: DeployBatchEndpoint
+      steps:
+      - checkout: self
+        path: s/
+      - template: templates/install-az-cli.yml
+      - template: templates/install-aml-cli.yml
+      - template: templates/connect-to-workspace.yml   
+      - template: templates/test-deployment.yml
+        parameters:
+          deployment_name: $(endpoint_name)
+          sample_request: $(data_path)
+          request_type: uri_file #either uri_folder or uri_file 
+

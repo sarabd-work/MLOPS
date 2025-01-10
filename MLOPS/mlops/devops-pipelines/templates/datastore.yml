@@ -1,0 +1,6 @@
+$schema: https://azuremlschemas.azureedge.net/latest/azureBlob.schema.json
+name: testdatastorecreation
+type: azure_blob
+description: Credential-less datastore pointing to a blob container.
+account_name: uksdevfdevmlwdatadlsa
+container_name: inputzone

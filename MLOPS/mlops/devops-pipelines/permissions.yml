@@ -1,0 +1,23 @@
+variables:
+- template: ../config-infra-dev.yml
+
+
+trigger:
+- none
+
+pool: $(ap_vm_image)
+
+stages:
+- stage: GivePermissions
+  displayName: Give Access to Data Storage
+  jobs:
+    - job: ChangeACL
+      timeoutInMinutes: 120 # how long to run the job before automatically cancelling
+      steps:
+      - checkout: self
+        path: s/
+      - template: templates/datalake.yml
+        parameters:
+          identifier: a194157a-b053-407c-ad81-e23fef7b473f
+          identifier_type: group
+          permissions: rwx

@@ -1,0 +1,32 @@
+variables:
+- ${{ if eq(variables['Build.SourceBranchName'], 'release') }}:
+    # 'main' branch: PRD environment
+    - template: ../config-infra-prod.yml
+- ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    # 'main' branch: UAT environment
+    - template: ../config-infra-uat.yml
+- ${{ if and(ne(variables['Build.SourceBranchName'], 'main'),ne(variables['Build.SourceBranchName'], 'release')) }}:  
+    # 'develop' or feature branches: DEV environment
+    - template: ../config-infra-dev.yml
+    
+trigger:
+- none
+
+pool: $(ap_vm_image)
+
+stages:
+- stage: PromoteModel
+  displayName: Promote Model 
+  jobs:
+    - job: PromoteModel
+      steps:
+      - checkout: self
+        path: s/
+      - template: templates/install-az-cli.yml
+      - template: templates/install-aml-cli.yml
+      - template: templates/download-model.yml
+        parameters:
+          model_name: $(model_name)
+          workspace_name: $(ml_workspace)
+          version: $(version)
+          resource_group: $(resource_group)

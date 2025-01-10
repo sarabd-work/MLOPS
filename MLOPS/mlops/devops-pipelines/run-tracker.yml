@@ -1,0 +1,39 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+variables:
+- ${{ if eq(variables['Build.SourceBranchName'], 'release') }}:
+    # 'main' branch: PRD environment
+    - template: ../config-infra-prod.yml
+- ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    # 'main' branch: UAT environment
+    - template: ../config-infra-uat.yml
+- ${{ if and(ne(variables['Build.SourceBranchName'], 'main'),ne(variables['Build.SourceBranchName'], 'release')) }}:  
+    # 'develop' or feature branches: DEV environment
+    - template: ../config-infra-dev.yml
+
+trigger:
+- none
+
+pool: $(ap_vm_image)
+
+stages:
+- stage: CreateBatchEndpoint
+  displayName: Create/Update Batch Endpoint 
+  jobs:
+    - job: DeployBatchEndpoint
+      steps:
+      - checkout: self
+        path: s/
+      - template: templates/install-az-cli.yml
+      - template: templates/install-aml-cli.yml
+      - template: templates/connect-to-workspace.yml
+      - task: AzureCLI@2
+        displayName: Run info
+        inputs:
+          azureSubscription: $(ado_service_connection_aml_ws)
+          scriptType: bash
+          scriptLocation: inlineScript
+          workingDirectory: $(System.DefaultWorkingDirectory)
+          inlineScript: |
+              az ml run list

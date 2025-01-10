@@ -1,0 +1,13 @@
+parameters:
+- name: path
+  type: string
+- name: replaced
+  type: string
+- name: replacement
+  type: string
+steps:
+  - powershell: |
+      Write-Host "------------------------------------------------------------"
+      Write-Host "Get JS File content containing #include line", $(Agent.WorkFolder)
+      Write-Host "------------------------------------------------------------"
+      (Get-Content ${{ parameters.path }} -Encoding UTF8) -replace '${{ parameters.replaced }}', '${{ parameters.replacement }}' | Set-Content ${{ parameters.path }}

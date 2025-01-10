@@ -1,0 +1,12 @@
+parameters:
+- name: template_name
+  type: string
+- name: run_id
+  type: string
+steps:
+  - powershell: |
+      Write-Host "------------------------------------------------------------"
+      Write-Host "Get JS File content containing #include line", $(Agent.WorkFolder)
+      Write-Host "------------------------------------------------------------"
+      (Get-Content .\data-science\schedules\daily.yml -Encoding UTF8) -replace 'ofgemrunid', '${{ parameters.run_id }}' | Set-Content .\data-science\schedules\daily.yml 
+      gc .\data-science\schedules\daily.yml
